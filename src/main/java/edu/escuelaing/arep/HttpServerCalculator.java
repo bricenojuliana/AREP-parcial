@@ -1,11 +1,12 @@
 package edu.escuelaing.arep;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
+import java.lang.reflect.Method;
 
 public class HttpServerCalculator {
     private static final int PORT = 36000;
@@ -44,34 +45,13 @@ public class HttpServerCalculator {
             if ("GET".equalsIgnoreCase(method)) {
                 handleGetRequest(fileRequested, out, dataOut);
             } else if ("POST".equalsIgnoreCase(method)) {
-                // handlePostRequest(in, out);
+                handlePostRequest(in, out);
             }
 
             String inputLine;
             while ((inputLine = in.readLine()) != null && !inputLine.isEmpty()) {
                 System.out.println("Recibí: " + inputLine);
             }
-
-
-            System.out.println("Resultado de cálculo: " + calculate("max", new double[]{3.5, 5.0}));
-
-            String outputLine =
-                    "<!DOCTYPE html>" +
-                            "<html>" +
-                            "<head>" +
-                            "<meta charset=\"UTF-8\">" +
-                            "<title>Title of the document</title>" +
-                            "</head>" +
-                            "<body>" +
-                            "<h1>Mi propio mensaje</h1>" +
-                            "</body>" +
-                            "</html>";
-
-            out.println("HTTP/1.1 200 OK");
-            out.println("Content-Type: text/html");
-            out.println("Content-Length: " + outputLine.length());
-            out.println();
-            out.println(outputLine);
         }
     }
 
@@ -79,24 +59,22 @@ public class HttpServerCalculator {
         StringBuilder requestBody = new StringBuilder();
         String line;
         while (!(line = in.readLine()).isEmpty()) {
-            requestBody.append(line).append("\r\n");
+            System.out.println("Cabecera: " + line);
         }
 
-        String[] params = requestBody.toString().split("&");
-        Map<String, String> paramMap = new HashMap<>();
-        for (String param : params) {
-            String[] keyValue = param.split("=");
-            if (keyValue.length == 2) {
-                paramMap.put(keyValue[0], keyValue[1]);
-            }
+        while (in.ready()) {
+            requestBody.append((char) in.read());
         }
 
-        String expression = paramMap.get("expression");
-        if (expression != null) {
+        String expression = requestBody.toString().trim();
+        System.out.println("Cuerpo de la solicitud: " + expression);
+
+        if (!expression.isEmpty()) {
             try {
                 String operation;
                 double[] numbers;
 
+                // Analizar la expresión
                 int start = expression.indexOf('(');
                 int end = expression.indexOf(')');
 
@@ -105,10 +83,12 @@ public class HttpServerCalculator {
                     String numbersPart = expression.substring(start + 1, end).trim();
                     String[] values = numbersPart.split(",");
 
+                    // Convertir los valores a números
                     numbers = Arrays.stream(values)
                             .mapToDouble(Double::parseDouble)
                             .toArray();
 
+                    // Calcular el resultado
                     Double result = calculate(operation, numbers);
                     String response;
                     if (result != null) {
@@ -151,9 +131,6 @@ public class HttpServerCalculator {
             out.println(response);
         }
     }
-
-
-
 
     private static void handleGetRequest(String fileRequested, PrintWriter out, BufferedOutputStream dataOut) throws IOException {
         if (fileRequested.startsWith("/math")) {

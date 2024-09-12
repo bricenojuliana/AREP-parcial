@@ -18,29 +18,21 @@
 <script>
     function loadPostMsg() {
         const expression = document.getElementById("expression").value;
-        const url = "/math";
-        const params = new URLSearchParams();
-        params.append('expression', expression);
+        const url = "/";  // Usar la raíz del servidor
 
         fetch(url, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
+                'Content-Type': 'text/plain'  // Cambiado a 'text/plain'
             },
-            body: params.toString()
+            body: expression  // Enviar el cuerpo directamente como texto
         })
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            } else {
-                return response.text();
-            }
-        })
+        .then(response => response.json())
         .then(data => {
-            if (typeof data === 'object' && data.answer !== undefined) {
+            if (data.answer !== undefined) {
                 document.getElementById("postrespmsg").innerHTML = "Result: " + data.answer;
             } else {
-                document.getElementById("postrespmsg").innerHTML = "Error: " + data;
+                document.getElementById("postrespmsg").innerHTML = "Error: " + JSON.stringify(data);
             }
         })
         .catch(error => {

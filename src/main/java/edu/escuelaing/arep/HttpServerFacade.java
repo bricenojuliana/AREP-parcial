@@ -3,56 +3,72 @@ package edu.escuelaing.arep;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.ServerSocket;
 
 public class HttpServerFacade {
+    private static final int TARGET_PORT = 36000;
+
     public static void main(String[] args) throws IOException {
         ServerSocket serverSocket = null;
         try {
             serverSocket = new ServerSocket(40000);
         } catch (IOException e) {
-            System.err.println("Could not listen on port: 40000.");
+            System.err.println("No se pudo escuchar en el puerto: 40000.");
             System.exit(1);
         }
 
-        while (true){
+        while (true) {
             Socket clientSocket = null;
             try {
                 System.out.println("Escuchando en puerto 40000 ...");
                 clientSocket = serverSocket.accept();
+                handleClientRequest(clientSocket);
             } catch (IOException e) {
-                System.err.println("Accept failed.");
+                System.err.println("Error en la aceptación de conexión.");
                 System.exit(1);
             }
-            PrintWriter out = new PrintWriter(
-                    clientSocket.getOutputStream(), true);
-            BufferedReader in = new BufferedReader(
-                    new InputStreamReader(clientSocket.getInputStream()));
-            String inputLine, outputLine;
-            while ((inputLine = in.readLine()) != null) {
-                System.out.println("Recibido: " + inputLine);
-                if (!in.ready()) {break; }
-            }
-            outputLine =
-                    "<!DOCTYPE html>" +
-                            "<html>" +
-                            "<head>" +
-                            "<meta charset=\"UTF-8\">" +
-                            "<title>Title of the document</title>\n" +
-                            "</head>" +
-                            "<body>" +
-                            "<h1>Mi propio mensaje</h1>" +
-                            "</body>" +
-                            "</html>";
-            out.println(outputLine);
-            out.close();
-            in.close();
-            clientSocket.close();
-//            serverSocket.close();
         }
+    }
 
+    private static void handleClientRequest(Socket clientSocket) throws IOException {
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
 
+            StringBuilder request = new StringBuilder();
+            String line;
+            while ((line = in.readLine()) != null && !line.isEmpty()) {
+                request.append(line).append("\r\n");
+            }
+
+            String response = forwardRequestToTargetServer(request.toString());
+
+            out.println(response);
+        } finally {
+            clientSocket.close();
+        }
+    }
+
+    private static String forwardRequestToTargetServer(String request) {
+        try (Socket targetSocket = new Socket("localhost", TARGET_PORT);
+             PrintWriter targetOut = new PrintWriter(targetSocket.getOutputStream(), true);
+             BufferedReader targetIn = new BufferedReader(new InputStreamReader(targetSocket.getInputStream()))) {
+
+            targetOut.println(request);
+
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = targetIn.readLine()) != null) {
+                response.append(line).append("\r\n");
+            }
+
+            return response.toString();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "Error al redirigir la solicitud.";
+        }
     }
 }
