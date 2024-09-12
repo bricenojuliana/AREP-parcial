@@ -74,7 +74,7 @@ public class HttpServerCalculator {
                 String operation;
                 double[] numbers;
 
-                // Analizar la expresión
+                
                 int start = expression.indexOf('(');
                 int end = expression.indexOf(')');
 
@@ -83,12 +83,12 @@ public class HttpServerCalculator {
                     String numbersPart = expression.substring(start + 1, end).trim();
                     String[] values = numbersPart.split(",");
 
-                    // Convertir los valores a números
+                    
                     numbers = Arrays.stream(values)
                             .mapToDouble(Double::parseDouble)
                             .toArray();
 
-                    // Calcular el resultado
+                    
                     Double result = calculate(operation, numbers);
                     String response;
                     if (result != null) {
